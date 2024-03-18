@@ -1,6 +1,8 @@
 package com.axway.pagination.api;
 
+import com.axway.pagination.mapper.EmployeeMapper;
 import com.axway.pagination.model.Employee;
+import com.axway.pagination.model.EmployeeDTO;
 import com.axway.pagination.repo.EmployeeRepository;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
@@ -12,6 +14,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,6 +22,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.StreamSupport;
 
 @RestController
@@ -30,10 +34,12 @@ public class EmployeeController {
     private final CsvMapper mapper = new CsvMapper();
 
     private final EmployeeRepository employeeRepository;
+    private final EmployeeMapper employeeMapper;
 
 
-    public EmployeeController(EmployeeRepository employeeRepository) {
+    public EmployeeController(EmployeeRepository employeeRepository, EmployeeMapper employeeMapper) {
         this.employeeRepository = employeeRepository;
+        this.employeeMapper = employeeMapper;
     }
 
 
@@ -44,7 +50,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/latest")
-    public Page<Employee> findAllLatestByCreatedDate(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size, @RequestParam("dateTime") String  date) {
+    public Page<Employee> findAllLatestByCreatedDate(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size, @RequestParam("dateTime") String date) {
         logger.info("Date : {}", date);
         PageRequest pageRequest = PageRequest.of(page, size);
         return employeeRepository.findByCreatedAtGreaterThanEqual(pageRequest, Timestamp.from(Instant.parse(date)));
@@ -53,6 +59,19 @@ public class EmployeeController {
     @PostMapping
     public Employee create(@RequestBody Employee employee) {
         return employeeRepository.save(employee);
+    }
+
+    @PutMapping("/{id}")
+    public Employee update(@RequestBody EmployeeDTO employee, @PathVariable("id") long id) {
+        Optional<Employee> value = employeeRepository.findById(id);
+        if (value.isPresent()) {
+            Employee existingEmployee = value.get();
+            employeeMapper.updateEmployee(employee, existingEmployee);
+            return employeeRepository.save(existingEmployee);
+        }
+        throw new ResponseStatusException(
+            HttpStatus.NOT_FOUND, "entity not found"
+        );
     }
 
 
@@ -95,7 +114,6 @@ public class EmployeeController {
             employeeDB.setCity(employee.getCity());
             employeeDB.setConsumer(employee.getConsumer());
             employeesDB.add(employeeDB);
-
         }
         return employeesDB;
     }

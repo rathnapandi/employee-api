@@ -13,7 +13,16 @@ services:
       - ai-net
     ports:
       - "5432:5432"
-
+  api:
+    image: rathnapandi/employee:0.0.2
+    environment:
+      DB_USER: amplifyi
+      DB_HOST: postgres-db
+      DB_PASSWORD: changeme
+    networks:
+      - ai-net
+    ports:
+      - "8080:8080"
 networks:
   ai-net:
     external: false
