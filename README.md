@@ -2,7 +2,7 @@
 
 
 
-## Getting started
+## Build project
 
 ```bash
 $mvnw clean package
